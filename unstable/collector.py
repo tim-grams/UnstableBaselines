@@ -56,7 +56,7 @@ def play_episode(spec: PlaySpec, actor: VLLMActor) -> EpisodeResult:
                 traj.pid.append(pid); traj.obs.append(prompt); traj.actions.append(raw); traj.extracted_actions.append(extracted)
                 traj.infos.append(step_info); format_feedback["invalid_move"] = 0; traj.format_feedbacks.append(format_feedback)
             if done: break
-            action_seq.append(_extract_action(extracted, action_space=action_spaces[spec.env_id]))
+            action_seq.append(_extract_action(extracted, action_space=action_spaces[spec.env_id] if spec.env_id in action_spaces else None))
             turn += 1
         traj.final_rewards, game_info = env.close(); traj.num_turns = turn
         if spec.num_players > 1: end_by_opp_inv = game_info[1-spec.player_id]["invalid_move"]
