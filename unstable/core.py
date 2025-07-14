@@ -5,10 +5,12 @@ from collections import defaultdict, Counter, deque
 
 @dataclass
 class Trajectory:
+    env_id: str
     pid: List[int] = field(default_factory=list)
     obs: List[str] = field(default_factory=list)
     actions: List[str] = field(default_factory=list)
     extracted_actions: List[str] = field(default_factory=list)
+    rewards: List[float] = field(default_factory=list)
     infos: List[Dict] = field(default_factory=list)
     final_rewards: Dict[int, float] = field(default_factory=dict)
     num_turns: int = field(default_factory=int)
@@ -16,11 +18,11 @@ class Trajectory:
 
 @dataclass
 class Step:
+    env_id: str
     pid: int
     obs: str 
     act: str
     reward: float
-    env_id: str
     step_info: Dict
 
 @dataclass
@@ -100,7 +102,7 @@ class BaseTracker:
     def log_lerner(self, info_dict: Dict): raise NotImplementedError
 
 class ExplorationTracker:
-    def __init__(self, window: int = 512, ngram_sizes: Tuple[int, ...] = (1, 2, 3, 4)):
+    def __init__(self, window: int = 1_000_000_000, ngram_sizes: Tuple[int, ...] = (1, 2, 3, 4)):
         self.window = window
         self.ngram_sizes = ngram_sizes
         self._iter = 0
@@ -110,6 +112,7 @@ class ExplorationTracker:
 
     def _ngrams(self, toks: List[str], n: int) -> List[int]:    return [hash(tuple(toks[i : i + n])) for i in range(len(toks) - n + 1)]
     def pct_unique(self, env_id: str, n: int) -> float:         return len(self.counter[env_id][n]) / self.total[env_id][n] if self.total[env_id][n] else 0.0
+    def ct_unique(self, env_id: str, n: int) -> int:          return len(self.counter[env_id][n])
     def add_game(self, action_seq: List[str], env_id: str) -> None:
         self._iter += 1
         for n in self.ngram_sizes:

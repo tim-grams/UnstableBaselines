@@ -27,8 +27,14 @@ class CallableActorWrapper:
         extracted, format_feedback = self._extract(raw_action=raw)
         return raw, extracted, prompt, format_feedback
 
+action_spaces = {
+    'SimpleTak-v0-train': rf"\[\s*({'|'.join(str(i) for i in range(4**2))})\s*\]",
+    'TicTacToe-v0-train': rf"\[\s*({'|'.join(str(i) for i in range(3**2))})\s*\]",
+    'ConnectFour-v0-train': r".*\[(?:col\s*)?(\d+)\].*"
+}
 def _iter_from_uid(uid: str) -> int: return int(m.group(1)) if (m := re.search(r"(\d+)$", uid)) else 0
-def _extract_action(action: str) -> str: return (m.group(1).strip().lower() if (m := re.search(r"\[(.*?)\]", action)) else "")
+def _extract_action(action: str, action_space=None) -> str: return (m.group(1).strip().lower() if (m := re.search(r".*" if action_space is None else action_space, action)) else "")
+#def _extract_action(action: str) -> str: return (m.group(1).strip().lower() if (m := re.search(r'.*\[(?:col\s*)?(\d+)\].*', action)) else "")
 
 @ray.remote(num_cpus=0)
 def play_episode(spec: PlaySpec, actor: VLLMActor) -> EpisodeResult:
@@ -40,7 +46,7 @@ def play_episode(spec: PlaySpec, actor: VLLMActor) -> EpisodeResult:
                 case _: raise ValueError(f"unknown kind {agent_spec.kind!r}")
         agents = {pid: _build_agent(spec.agent_specs[pid]) for pid in range(spec.num_players)}
         env=ta.make(spec.env_id); env.reset(num_players=spec.num_players, seed=spec.seed); env.state.error_allowance=0
-        traj = Trajectory(); turn = 0; action_seq: List[str] = []
+        traj = Trajectory(env_id=spec.env_id); turn = 0; action_seq: List[str] = []
         while True:
             pid, obs = env.get_observation()
             if pid == spec.player_id: raw, extracted, prompt, format_feedback = agents[pid].act_full(obs)
@@ -50,7 +56,7 @@ def play_episode(spec: PlaySpec, actor: VLLMActor) -> EpisodeResult:
                 traj.pid.append(pid); traj.obs.append(prompt); traj.actions.append(raw); traj.extracted_actions.append(extracted)
                 traj.infos.append(step_info); format_feedback["invalid_move"] = 0; traj.format_feedbacks.append(format_feedback)
             if done: break
-            action_seq.append(_extract_action(extracted))
+            action_seq.append(_extract_action(extracted, action_space=action_spaces[spec.env_id]))
             turn += 1
         traj.final_rewards, game_info = env.close(); traj.num_turns = turn
         if spec.num_players > 1: end_by_opp_inv = game_info[1-spec.player_id]["invalid_move"]
@@ -58,7 +64,10 @@ def play_episode(spec: PlaySpec, actor: VLLMActor) -> EpisodeResult:
         if game_info[spec.player_id]["invalid_move"]: traj.format_feedbacks[-1]["invalid_move"] = 1
         return EpisodeResult(traj=traj, end_by_opponent_invalid=end_by_opp_inv, action_seq=action_seq, final_rewards=traj.final_rewards)
     except Exception as e:
+        import traceback
         print(f"EXCEPTION DURING COLLECTION {e}")
+        traceback.print_exc()
+        raise e
 
 @ray.remote
 class Collector:

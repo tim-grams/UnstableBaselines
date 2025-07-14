@@ -21,7 +21,9 @@ class ModelPool:
         # for tracking
         self._match_counts = defaultdict(int) # (uid_a, uid_b) -> games played
         self._exploration_tracker: dict[str, ExplorationTracker] = {}
+        self._exploration_tracker_500: dict[str, ExplorationTracker] = {}
         self._exploration_metrics: dict[str, dict[str, dict[str, float]]] = {}
+        self._exploration_metrics_500: dict[str, dict[str, dict[str, float]]] = {}
         self._step_counter = 0 # learner step snapshot id
         self._tracker = tracker
         self.logger = setup_logger("model_pool", ray.get(tracker.get_log_dir.remote())) # set up logging
@@ -106,20 +108,23 @@ class ModelPool:
         self._match_counts[tuple(sorted((uid_me, uid_opp)))] += 1
 
     def _track_exploration(self, uid_me: str, uid_opp: str, game_action_seq: List[str], env_id: str):
-        for uid in [uid_me, uid_opp]:
-            if uid not in self._exploration_tracker: self._exploration_tracker[uid] = ExplorationTracker()
+        for uid in ["all"]:
+            if uid not in self._exploration_tracker: self._exploration_tracker[uid] = ExplorationTracker(ngram_sizes=(3, 4, 6)); self._exploration_tracker_500[uid] = ExplorationTracker(window=500, ngram_sizes=(1, 2, 3, 4, 6))
             self._exploration_tracker[uid].add_game(action_seq=game_action_seq, env_id=env_id)
+            self._exploration_tracker_500[uid].add_game(action_seq=game_action_seq, env_id=env_id)
 
             if uid not in self._exploration_metrics: self._exploration_metrics[uid] = {}
             if env_id not in self._exploration_metrics[uid]: self._exploration_metrics[uid][env_id] = {}
             for ngram_size in self._exploration_tracker[uid].ngram_sizes:
-                self._exploration_metrics[uid][env_id][f"{ngram_size}-gram"] = self._exploration_tracker[uid].pct_unique(env_id=env_id, n=ngram_size)
+                self._exploration_metrics[uid][env_id][f"{ngram_size}-gram"] = self._exploration_tracker[uid].ct_unique(env_id=env_id, n=ngram_size)
+                self._exploration_metrics[uid][env_id][f"{ngram_size}-gram (500)"] = self._exploration_tracker_500[uid].ct_unique(env_id=env_id, n=ngram_size)
 
     def push_game_outcome(self, uid_me: str, uid_opp: str, final_reward: float, game_action_seq: List[str], env_id: str):
         if uid_me not in self._models or uid_opp not in self._models: return  # skip if either side is unknown
         self._update_ratings(uid_me=uid_me, uid_opp=uid_opp, final_reward=final_reward) # update ts
         self._register_game(uid_me=uid_me, uid_opp=uid_opp) # register the game for tracking
-        self._track_exploration(uid_me, uid_opp, game_action_seq, env_id)
+        if env_id in ['SimpleTak-v0-train', 'ConnectFour-v0-train', 'TicTacToe-v0-train']:
+            self._track_exploration(uid_me, uid_opp, game_action_seq, env_id)
         self.snapshot(self._step_counter)
         
     def _exp_win(self, A, B):   return self.TS.cdf((A.mu - B.mu) / ((2*self.TS.beta**2 + A.sigma**2 + B.sigma**2) ** 0.5))
@@ -144,7 +149,7 @@ class ModelPool:
     
     def snapshot(self, iteration: int):
         try: self._tracker.log_model_pool.remote(
-            match_counts=dict(self._match_counts), exploration=self._exploration_metrics[self._latest_uid],
+            match_counts=dict(self._match_counts), exploration=self._exploration_metrics["all"],
             ts_dict={u: {"mu": o.rating.mu, "sigma": o.rating.sigma} for u, o in self._models.items()},
         )
         except Exception as exc: self.logger.exception(f"failed pushing snapshot at iter={iteration}-\n\n{exc}\n\n")

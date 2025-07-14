@@ -66,7 +66,7 @@ class Tracker(BaseTracker):
         #     tbl = wandb.Table(columns=["uid_a", "uid_b", "games"], data=[[*pair, cnt] for pair, cnt in top])
         #     self._buffer["pool/top_matchups"] = tbl
         self._interface_stats.update({"TS": ts_dict, "exploration": exploration, "match_counts": match_counts})
-        self._buffer.update({f"exploration/{env_id}/Pct. Unique Action {n_gram}": pct for env_id in exploration.keys() for n_gram, pct in exploration[env_id].items()})
+        self._buffer.update({f"exploration/{env_id}/Ct. Unique Action {n_gram}": pct for env_id in exploration.keys() for n_gram, pct in exploration[env_id].items()})
 
     def log_inference(self, actor: str, gpu_ids: list[int], stats: dict[str, float]):
         for key in stats: self._put(f"inference/{actor}/{key}", stats[key])

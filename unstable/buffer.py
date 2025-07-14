@@ -75,4 +75,3 @@ class StepBuffer:
     def stop(self):                 self.collect = False
     def size(self) -> int:          return len(self.steps)
     def continue_collection(self):  return self.collect
-

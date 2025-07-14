@@ -16,16 +16,21 @@ class Reinforce(BaseAlgo):
         enc, advs, obs, avg_len, pct_truncated = self.prepare_batch(steps=steps)
         out = self.model(**enc)
         logp = torch.nn.functional.log_softmax(out.logits, dim=-1)
+        probs = logp.exp()
+        token_entropy = -(probs * logp).sum(-1)  # shape: (batch_size, seq_len)
+        token_entropy = token_entropy[:, 1:]  # align with mask
         tgt_ids = enc.input_ids[:, 1:]
         tok_logp = logp[:, :-1, :].gather(-1, tgt_ids.unsqueeze(-1)).squeeze(-1)
         mask = torch.ones_like(enc.input_ids, dtype=torch.bool, device=self.device) # build prompt mask
         for i, o in enumerate(obs): mask[i, :len(self.tokenizer(o, add_special_tokens=False)["input_ids"])] = False
         mask = mask[:, 1:]
+        avg_token_entropy = (token_entropy * mask).sum() / mask.sum()
         seq_logp = (tok_logp * mask).sum(1) / self.max_generation_len
         loss = -(advs * seq_logp).mean() / scaling
         loss.backward()
         torch.cuda.empty_cache()
         return {
             "loss": loss.item(), "logp_mean": seq_logp.mean().item(), "logp_std": seq_logp.std().item(),
-            "num_steps": len(steps), "avg_train_len": avg_len, "pct_truncated": pct_truncated
+            "num_steps": len(steps), "avg_train_len": avg_len, "pct_truncated": pct_truncated,
+            "avg_token_entropy": avg_token_entropy.item(),
         }

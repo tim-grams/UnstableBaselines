@@ -2,16 +2,16 @@ import time, ray, unstable
 import unstable.reward_transformations as retra
 
 NUM_LEARNERS = 1
-NUM_ACTORS = 2
-COLLECTION_WORKERS = 64
-EVALUATION_WORKERS = 0
-ITERATIONS = 200
-# MODEL_NAME = "Qwen/Qwen3-1.7B-Base"
-MODEL_NAME = "Qwen/Qwen3-0.6B-Base"
+NUM_ACTORS = 1
+COLLECTION_WORKERS = 256
+EVALUATION_WORKERS = 20
+ITERATIONS = 4000
+MODEL_NAME = "Qwen/Qwen3-1.7B-Base"
+# MODEL_NAME = "Qwen/Qwen3-0.6B-Base"
 # MODEL_NAME = "meta-llama/Llama-3.2-3B-Instruct"
-BATCH_SIZE = 8
+BATCH_SIZE = 256
 MINI_BATCH_SIZE = 1
-BUFFER_SIZE = 384*2
+BUFFER_SIZE = 256*2
 LR = 1e-5
 GRAD_CLIP = 0.2
 MAX_TRAIN_SEQ_LEN = None
@@ -35,7 +35,26 @@ vllm_config = {
 }
 
 TRAINING_ENVS = [
+    ("TicTacToe-v0-train", 2, "qwen3-zs"), 
     ("SimpleTak-v0-train", 2, "qwen3-zs"), 
+    ("ConnectFour-v0-train", 2, "qwen3-zs"),
+    ("KuhnPoker-v0-train", 2, "qwen3-zs"), 
+    ("Breakthrough-v0-train", 2, "qwen3-zs"),
+    # ("Nim-v0-train", 2, "qwen3-zs"), 
+    # ("KuhnPoker-v0-train", 2, "llama-instruct-zs"), 
+    #("SimpleNegotiation-v0-train", 2, "llama-instruct-zs")
+    # ("PigDice-v0-train", 2, "qwen3-zs")
+    # ("Othello-v0-train", 2, "qwen3-zs")
+    # ("Snake-v0-train", 2, "qwen3-zs")
+    # ("Chopsticks-v0-train", 2, "qwen3-zs")
+    # ("GameOfPureStrategy-v0-train", 2, "qwen3-zs")
+]
+EVALUATION_ENVS = [
+    ("TicTacToe-v0-train", 2, "qwen3-zs"), 
+    ("SimpleTak-v0-train", 2, "qwen3-zs"), 
+    ("ConnectFour-v0-train", 2, "qwen3-zs")
+    # ("FrozenLake-v0-train", 1, "qwen3-sp"), 
+    # ("ConnectFour-v0-train", 2, "qwen3-zs"),
     # ("LiarsDice-v0-train", 2, "qwen3-zs"), 
     # ("Nim-v0-train", 2, "qwen3-zs"), 
     # ("KuhnPoker-v0-train", 2, "qwen3-zs"), 
@@ -46,21 +65,9 @@ TRAINING_ENVS = [
     # ("Chopsticks-v0-train", 2, "qwen3-zs")
     # ("GameOfPureStrategy-v0-train", 2, "qwen3-zs")
 ]
-EVALUATION_ENVS = [
-    ("SimpleTak-v0-train", 2, "qwen3-zs"), 
-    # ("LiarsDice-v0-train", 2, "qwen3-zs"), 
-    ("Nim-v0-train", 2, "qwen3-zs"), 
-    ("KuhnPoker-v0-train", 2, "qwen3-zs"), 
-    # ("SimpleNegotiation-v0-train", 2, "qwen3-zs")
-    # ("PigDice-v0-train", 2, "qwen3-zs")
-    # ("Othello-v0-train", 2, "qwen3-zs")
-    # ("Snake-v0-train", 2, "qwen3-zs")
-    # ("Chopsticks-v0-train", 2, "qwen3-zs")
-    # ("GameOfPureStrategy-v0-train", 2, "qwen3-zs")
-]
 
 # WANDB_RUN_NAME = f"Reward-Ablation--exp1-{MODEL_NAME.split('/')[-1]}-{[t[0] for t in TRAINING_ENVS]}-{int(time.time())}"
-WANDB_RUN_NAME = f"Debugging-run-{MODEL_NAME.split('/')[-1]}-{[t[0] for t in TRAINING_ENVS]}-{int(time.time())}"
+WANDB_RUN_NAME = f"exploration-{MODEL_NAME.split('/')[-1]}-{[t[0] for t in TRAINING_ENVS]}-{int(time.time())}"
 
 
 ray.init(namespace="unstable") # Ray init 
