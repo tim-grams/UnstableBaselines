@@ -20,7 +20,7 @@ import wandb
 import textarena as ta
 
 def build_dataset(env_id, engine, sampling_params, lora_req, template, min_turns: int = 10, sample_k: int = 5):
-    env=ta.make(env_id); env.reset(num_players=2); env.state.error_allowance=0
+    env=ta.make(env_id); env.reset(num_players=1 if env_id == "Wordle-v0-train" else 2); env.state.error_allowance=0
     observations = []
     while len(observations) < min_turns:
         turn = 0
@@ -111,10 +111,10 @@ if __name__ == "__main__":
     parser.add_argument("--env_id", type=str, default="SimpleTak-v0-train")
     parser.add_argument("--model", type=str, default="Qwen/Qwen3-1.7B-Base")
     parser.add_argument("--dataset", type=str, default=None)
-    parser.add_argument("--max_parallel_seq", type=int, default=1)
+    parser.add_argument("--max_parallel_seq", type=int, default=40)
     parser.add_argument("--tensor_parallel_size", type=int, default=1)
     parser.add_argument("--max_model_len", type=int, default=8192)
-    parser.add_argument("--checkpoints_dir", type=str, default="/work/tgrams/selfplay/UnstableBaselines/outputs/2025-07-15/01-11-42/exploration-Qwen3-1.7B-Base-['Wordle-v0-train']-1752534684/checkpoints")
+    parser.add_argument("--checkpoints_dir", type=str, default=None)
     parser.add_argument("--eval_every", type=int, default=50)
     parser.add_argument("--max_loras", type=int, default=8)
     parser.add_argument("--lora_rank", type=int, default=32)
@@ -130,7 +130,7 @@ if __name__ == "__main__":
     wandb.init(project="UnstableBaselines", config=vars(args), name=f"exploration-static-{args.env_id}-{args.model}")
 
     checkpoint_paths = sorted(list(os.listdir(args.checkpoints_dir)), key=lambda x: int(x.split("-")[-1])) if args.checkpoints_dir else ["default"]
-    if len(checkpoint_paths) > 1: checkpoint_paths = [cp for cp in checkpoint_paths if int(cp.split("-")[-1]) % args.eval_every == 0]
+    if len(checkpoint_paths) > 1: checkpoint_paths = [cp for cp in checkpoint_paths if (int(cp.split("-")[-1])-1) % args.eval_every == 0]
     for checkpoint in checkpoint_paths:
         print(f"Evaluating {args.model} with {checkpoint}")
         avg_entropy, avg_actions = evaluate(args, os.path.join(args.checkpoints_dir, checkpoint) if checkpoint != "default" else None)

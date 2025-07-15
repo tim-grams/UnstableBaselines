@@ -6,7 +6,7 @@ NUM_ACTORS = 1
 COLLECTION_WORKERS = 256
 EVALUATION_WORKERS = 20
 ITERATIONS = 4000
-MODEL_NAME = "Qwen/Qwen3-1.7B-Base"
+MODEL_NAME = "Qwen/Qwen3-1.7B"
 # MODEL_NAME = "Qwen/Qwen3-0.6B-Base"
 # MODEL_NAME = "meta-llama/Llama-3.2-3B-Instruct"
 BATCH_SIZE = 256
@@ -35,11 +35,11 @@ vllm_config = {
 }
 
 TRAINING_ENVS = [
-    ("TicTacToe-v0-train", 2, "qwen3-zs"), 
+    # ("TicTacToe-v0-train", 2, "qwen3-zs"), 
     ("SimpleTak-v0-train", 2, "qwen3-zs"), 
-    ("ConnectFour-v0-train", 2, "qwen3-zs"),
-    ("KuhnPoker-v0-train", 2, "qwen3-zs"), 
-    ("Breakthrough-v0-train", 2, "qwen3-zs"),
+    # ("ConnectFour-v0-train", 2, "qwen3-zs"),
+    # ("KuhnPoker-v0-train", 2, "qwen3-zs"), 
+    # ("Breakthrough-v0-train", 2, "qwen3-zs"),
     # ("Nim-v0-train", 2, "qwen3-zs"), 
     # ("KuhnPoker-v0-train", 2, "llama-instruct-zs"), 
     #("SimpleNegotiation-v0-train", 2, "llama-instruct-zs")
@@ -50,9 +50,9 @@ TRAINING_ENVS = [
     # ("GameOfPureStrategy-v0-train", 2, "qwen3-zs")
 ]
 EVALUATION_ENVS = [
-    ("TicTacToe-v0-train", 2, "qwen3-zs"), 
+    # ("TicTacToe-v0-train", 2, "qwen3-zs"), 
     ("SimpleTak-v0-train", 2, "qwen3-zs"), 
-    ("ConnectFour-v0-train", 2, "qwen3-zs")
+    # ("ConnectFour-v0-train", 2, "qwen3-zs")
     # ("FrozenLake-v0-train", 1, "qwen3-sp"), 
     # ("ConnectFour-v0-train", 2, "qwen3-zs"),
     # ("LiarsDice-v0-train", 2, "qwen3-zs"), 
