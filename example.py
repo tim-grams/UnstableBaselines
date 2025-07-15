@@ -2,7 +2,7 @@ import time, ray, unstable
 import unstable.reward_transformations as retra
 
 NUM_LEARNERS = 1
-NUM_ACTORS = 1
+NUM_ACTORS = 3
 COLLECTION_WORKERS = 256
 EVALUATION_WORKERS = 20
 ITERATIONS = 4000
