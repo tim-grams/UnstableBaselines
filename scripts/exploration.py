@@ -6,6 +6,7 @@ import re
 import csv
 import math
 import uuid
+import random
 import argparse
 from tqdm import tqdm
 from tqdm.asyncio import tqdm
@@ -18,10 +19,10 @@ from unstable.utils.templates import OBSERVATION_FORMATTING, extract_action_and_
 import wandb
 import textarena as ta
 
-def build_dataset(env_id, engine, sampling_params, lora_req, template, num_episodes=3):
+def build_dataset(env_id, engine, sampling_params, lora_req, template, min_turns: int = 10, sample_k: int = 5):
     env=ta.make(env_id); env.reset(num_players=2); env.state.error_allowance=0
     observations = []
-    for _ in tqdm(range(num_episodes), desc="Generating episodes"):
+    while len(observations) < min_turns:
         turn = 0
         while True:
             turn += 1
@@ -39,7 +40,8 @@ def build_dataset(env_id, engine, sampling_params, lora_req, template, num_episo
             done, _ = env.step(action)
             if done: break
         env.close()
-    return observations
+        print('OBSERVATIONS:', len(observations))
+    return observations if len(observations) <= sample_k else random.sample(observations, sample_k)
 
 
 def rollout(example, engine, sampling_params, lora_req, template, num_turns: int = 25):
@@ -73,7 +75,7 @@ def evaluate(args, lora_path = None):
     sampling_params = SamplingParams(temperature=args.temperature, top_p=args.top_p, max_tokens=args.max_tokens)
     lora_req = LoRARequest(lora_path, 1, lora_path) if lora_path else None
 
-    data = build_dataset(args.env_id, engine, sampling_params, lora_req, OBSERVATION_FORMATTING[args.template], args.num_episodes)
+    data = build_dataset(args.env_id, engine, sampling_params, lora_req, OBSERVATION_FORMATTING[args.template], args.min_turns)
     metrics = {"all": {"entropy": [], "unique_actions": []}}
     for example in tqdm(data, desc="Evaluating examples"):
         entropy, actions = rollout(
@@ -109,22 +111,23 @@ if __name__ == "__main__":
     parser.add_argument("--env_id", type=str, default="SimpleTak-v0-train")
     parser.add_argument("--model", type=str, default="Qwen/Qwen3-1.7B-Base")
     parser.add_argument("--dataset", type=str, default=None)
-    parser.add_argument("--max_parallel_seq", type=int, default=40)
+    parser.add_argument("--max_parallel_seq", type=int, default=1)
     parser.add_argument("--tensor_parallel_size", type=int, default=1)
     parser.add_argument("--max_model_len", type=int, default=8192)
-    parser.add_argument("--checkpoints_dir", type=str, default=None)
-    parser.add_argument("--eval_every", type=int, default=40)
+    parser.add_argument("--checkpoints_dir", type=str, default="/work/tgrams/selfplay/UnstableBaselines/outputs/2025-07-15/01-11-42/exploration-Qwen3-1.7B-Base-['Wordle-v0-train']-1752534684/checkpoints")
+    parser.add_argument("--eval_every", type=int, default=50)
     parser.add_argument("--max_loras", type=int, default=8)
     parser.add_argument("--lora_rank", type=int, default=32)
     parser.add_argument("--temperature", type=float, default=0.6)
     parser.add_argument("--top_p", type=float, default=0.95)
     parser.add_argument("--max_tokens", type=int, default=4096)
-    parser.add_argument("--num_turns", type=int, default=10)
-    parser.add_argument("--num_episodes", type=int, default=2)
+    parser.add_argument("--num_turns", type=int, default=80)
+    parser.add_argument("--min_turns", type=int, default=40)
+    parser.add_argument("--sample_k", type=int, default=20)
     parser.add_argument("--template", type=str, default="qwen3-zs")
     args = parser.parse_args()
 
-    wandb.init(project="UnstableBaselines", config=vars(args), name=f"EXPLORATION-EVAL-{args.model}")
+    wandb.init(project="UnstableBaselines", config=vars(args), name=f"exploration-static-{args.env_id}-{args.model}")
 
     checkpoint_paths = sorted(list(os.listdir(args.checkpoints_dir)), key=lambda x: int(x.split("-")[-1])) if args.checkpoints_dir else ["default"]
     if len(checkpoint_paths) > 1: checkpoint_paths = [cp for cp in checkpoint_paths if int(cp.split("-")[-1]) % args.eval_every == 0]

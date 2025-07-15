@@ -109,7 +109,8 @@ class ModelPool:
 
     def _track_exploration(self, uid_me: str, uid_opp: str, game_action_seq: List[str], env_id: str):
         for uid in ["all"]:
-            if uid not in self._exploration_tracker: self._exploration_tracker[uid] = ExplorationTracker(ngram_sizes=(3, 4, 6)); self._exploration_tracker_500[uid] = ExplorationTracker(window=500, ngram_sizes=(1, 2, 3, 4, 6))
+            # if uid not in self._exploration_tracker: self._exploration_tracker[uid] = ExplorationTracker(ngram_sizes=(3, 4, 6)); self._exploration_tracker_500[uid] = ExplorationTracker(window=500, ngram_sizes=(1, 2, 3, 4, 6))
+            if uid not in self._exploration_tracker: self._exploration_tracker[uid] = ExplorationTracker(ngram_sizes=(1, 3)); self._exploration_tracker_500[uid] = ExplorationTracker(window=500, ngram_sizes=(1, 3))
             self._exploration_tracker[uid].add_game(action_seq=game_action_seq, env_id=env_id)
             self._exploration_tracker_500[uid].add_game(action_seq=game_action_seq, env_id=env_id)
 
@@ -123,7 +124,7 @@ class ModelPool:
         if uid_me not in self._models or uid_opp not in self._models: return  # skip if either side is unknown
         self._update_ratings(uid_me=uid_me, uid_opp=uid_opp, final_reward=final_reward) # update ts
         self._register_game(uid_me=uid_me, uid_opp=uid_opp) # register the game for tracking
-        if env_id in ['SimpleTak-v0-train', 'ConnectFour-v0-train', 'TicTacToe-v0-train']:
+        if env_id in ['SimpleTak-v0-train', 'ConnectFour-v0-train', 'TicTacToe-v0-train', 'Wordle-v0-train']:
             self._track_exploration(uid_me, uid_opp, game_action_seq, env_id)
         self.snapshot(self._step_counter)
         

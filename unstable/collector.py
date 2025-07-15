@@ -30,7 +30,8 @@ class CallableActorWrapper:
 action_spaces = {
     'SimpleTak-v0-train': rf"\[\s*({'|'.join(str(i) for i in range(4**2))})\s*\]",
     'TicTacToe-v0-train': rf"\[\s*({'|'.join(str(i) for i in range(3**2))})\s*\]",
-    'ConnectFour-v0-train': r".*\[(?:col\s*)?(\d+)\].*"
+    'ConnectFour-v0-train': r".*\[(?:col\s*)?(\d+)\].*",
+    'Wordle-v0-train': r"\[(\w+)\]"
 }
 def _iter_from_uid(uid: str) -> int: return int(m.group(1)) if (m := re.search(r"(\d+)$", uid)) else 0
 def _extract_action(action: str, action_space=None) -> str: return (m.group(1).strip().lower() if (m := re.search(r".*" if action_space is None else action_space, action)) else "")
